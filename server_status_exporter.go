@@ -40,8 +40,8 @@ func main() {
 	intervaSecond := flag.Int("interval-millli-second", 60, "interval sec")
 	busyWorkerNumMetricName := "busy-worker-num"
 	idleWorkerNumMetricName := "idle-worker-num"
-	metricValue := int64(0)
 	flag.Parse()
+
 	if *podName == "" {
 		log.Fatalf("No pod name specified.")
 	}
@@ -86,13 +86,13 @@ func main() {
 		if busyErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", busyErr)
 		} else {
-			log.Printf("Finished writing time series for new resource model with value: %v\n", metricValue)
+			log.Printf("Finished writing time series for new resource model with value: %v\n", output.BusyWorkers)
 		}
 		idleErr := exportMetric(stackdriverService, idleWorkerNumMetricName, output.IdleWorkers, "k8s_pod", modelLabels)
 		if idleErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", idleErr)
 		} else {
-			log.Printf("Finished writing time series for new resource model with value: %v\n", metricValue)
+			log.Printf("Finished writing time series for new resource model with value: %v\n", output.IdleWorkers)
 		}
 		time.Sleep(time.Duration(*intervaSecond) * time.Second)
 	}
