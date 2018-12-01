@@ -19,18 +19,13 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - ./server_status_exporter --metric-name=foo --metric-value=40 --use-new-resource-model --use-old-resource-model --pod-id=$(POD_ID) --pod-name=$(POD_NAME) --namespace=$(NAMESPACE)
-        image: springmt/rack-server-status-to-sd:latest
+        - ./server_status_exporter --pod-name=$(POD_NAME) --namespace=$(NAMESPACE) --interval-millli-second=60
+        image: springmt/rack-server-status-to-sd:v0.1.3
         name: server_status_exporter
         resources:
           requests:
             cpu: 100m
         env:
-          - name: POD_ID
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: metadata.uid
           - name: POD_NAME
             valueFrom:
               fieldRef:
