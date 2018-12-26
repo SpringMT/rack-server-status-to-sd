@@ -36,12 +36,17 @@ type ServerStatus struct {
 }
 
 func main() {
+	podID := flag.String("pod-id", "", "pod id")
 	namespace := flag.String("namespace", "", "namespace")
 	podName := flag.String("pod-name", "", "pod name")
 	intervaSecond := flag.Int("interval-millli-second", 60, "interval sec")
 	busyWorkerNumMetricName := "busy-worker-num"
 	idleWorkerNumMetricName := "idle-worker-num"
 	flag.Parse()
+
+	if *podID == "" {
+		log.Fatalf("No pod id specified.")
+	}
 
 	if *podName == "" {
 		log.Fatalf("No pod name specified.")
@@ -56,7 +61,7 @@ func main() {
 		log.Fatalf("Error getting Stackdriver service: %v", err)
 	}
 
-	modelLabels := getResourceLabelsForModel(*namespace, *podName)
+	modelLabels := getResourceLabelsForModel(*podID, *namespace, *podName)
 	for {
 		resp, err := http.Get("http://localhost:3000/server-status?json")
 		if err != nil {
@@ -82,14 +87,14 @@ func main() {
 			time.Sleep(time.Duration(*intervaSecond) * time.Second)
 			continue
 		}
-
-		busyErr := exportMetric(stackdriverService, busyWorkerNumMetricName, output.BusyWorkers, "k8s_pod", modelLabels)
+		// https://cloud.google.com/kubernetes-engine/docs/tutorials/custom-metrics-autoscaling#step2
+		busyErr := exportMetric(stackdriverService, busyWorkerNumMetricName, output.BusyWorkers, "gke_container", modelLabels)
 		if busyErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", busyErr)
 		} else {
 			log.Printf("Finished writing time series for new resource model with value: %v\n", output.BusyWorkers)
 		}
-		idleErr := exportMetric(stackdriverService, idleWorkerNumMetricName, output.IdleWorkers, "k8s_pod", modelLabels)
+		idleErr := exportMetric(stackdriverService, idleWorkerNumMetricName, output.IdleWorkers, "gke_container", modelLabels)
 		if idleErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", idleErr)
 		} else {
@@ -107,18 +112,24 @@ func getStackDriverService() (*monitoring.Service, error) {
 // getResourceLabelsForNewModel returns resource labels needed to correctly label metric data
 // exported to StackDriver. Labels contain details on the cluster (project id, location, name)
 // and pod for which the metric is exported (namespace, name).
-func getResourceLabelsForModel(namespace, name string) map[string]string {
+func getResourceLabelsForModel(podID, namespace, name string) map[string]string {
 	projectID, _ := gce.ProjectID()
+	zone, _ := gce.Zone()
 	location, _ := gce.InstanceAttributeValue("cluster-location")
 	location = strings.TrimSpace(location)
 	clusterName, _ := gce.InstanceAttributeValue("cluster-name")
 	clusterName = strings.TrimSpace(clusterName)
 	return map[string]string{
-		"project_id":     projectID,
-		"location":       location,
-		"cluster_name":   clusterName,
-		"namespace_name": namespace,
-		"pod_name":       name,
+		"project_id":   projectID,
+		"zone":         zone,
+		"cluster_name": clusterName,
+		// container name doesn't matter here, because the metric is exported for
+		// the pod, not the container
+		"container_name": "",
+		"pod_id":         podID,
+		// namespace_id and instance_id don't matter
+		"namespace_id": namespace,
+		"instance_id":  "",
 	}
 }
 
