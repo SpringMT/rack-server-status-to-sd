@@ -91,14 +91,10 @@ func main() {
 		busyErr := exportMetric(stackdriverService, busyWorkerNumMetricName, output.BusyWorkers, "gke_container", modelLabels)
 		if busyErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", busyErr)
-		} else {
-			log.Printf("Finished writing time series for new resource model with value: %v\n", output.BusyWorkers)
 		}
 		idleErr := exportMetric(stackdriverService, idleWorkerNumMetricName, output.IdleWorkers, "gke_container", modelLabels)
 		if idleErr != nil {
 			log.Printf("Failed to write time series data for new resource model: %v\n", idleErr)
-		} else {
-			log.Printf("Finished writing time series for new resource model with value: %v\n", output.IdleWorkers)
 		}
 		time.Sleep(time.Duration(*intervaSecond) * time.Second)
 	}
