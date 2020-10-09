@@ -1,4 +1,4 @@
-TAG = v0.1.9
+TAG = v1.0.0
 PREFIX = springmt
 
 build: server_status_exporter
